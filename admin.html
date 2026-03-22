@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Administration — Janton 3D 87</title>
+  <link rel="icon" type="image/png" href="assets/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body class="admin-body">
+  <header class="admin-header">
+    <div class="admin-header-inner">
+      <a href="index.html" class="admin-logo">← Janton 3D 87 Admin</a>
+      <button type="button" class="btn btn-outline btn-sm" id="admin-logout">Déconnexion</button>
+    </div>
+  </header>
+
+  <div id="admin-login-screen" class="admin-login">
+    <div class="admin-login-box">
+      <h1>Espace administration</h1>
+      <p>Mot de passe requis pour accéder aux devis, factures et galerie.</p>
+      <form id="login-form">
+        <div class="form-group">
+          <label for="admin-password">Mot de passe</label>
+          <input type="password" id="admin-password" name="password" required placeholder="Mot de passe admin" autocomplete="current-password">
+        </div>
+        <p class="admin-login-hint">Par défaut : <code>janton87</code> (à modifier dans admin.js)</p>
+        <button type="submit" class="btn btn-primary btn-full">Accéder à l'admin</button>
+      </form>
+    </div>
+  </div>
+
+  <main id="admin-main" class="admin-main" aria-hidden="true" hidden>
+    <div class="admin-tabs">
+      <button type="button" class="admin-tab is-active" data-tab="devis">Devis</button>
+      <button type="button" class="admin-tab" data-tab="factures">Factures</button>
+      <button type="button" class="admin-tab" data-tab="modeles">Modèles & tarifs</button>
+      <button type="button" class="admin-tab" data-tab="galerie">Galerie photos</button>
+      <button type="button" class="admin-tab" data-tab="avis">Avis clients</button>
+    </div>
+
+    <section id="panel-devis" class="admin-panel is-active">
+      <h2>Demandes de devis</h2>
+      <p class="admin-payment-notice">Les clients paient uniquement par <strong>carte bleue</strong>. Pensez à le rappeler lors de l’acceptation du devis.</p>
+      <div id="devis-list" class="admin-list"></div>
+    </section>
+
+    <section id="panel-factures" class="admin-panel">
+      <h2>Factures</h2>
+      <p class="admin-payment-notice">Paiement par <strong>carte bleue uniquement</strong>. Ce site n’envoie pas les e-mails tout seul : après chaque facture, cliquez le bouton jaune <strong>« E-mail client »</strong> (ouvre votre messagerie) ou copiez le lien Stripe.</p>
+      <p class="admin-facture-where"><strong>Où est le bouton ?</strong> Onglet <strong>Factures</strong> → créez une facture → sous chaque ligne vous avez le rectangle jaune <strong>E-mail client</strong> (il reste affiché même si la facture est marquée payée).</p>
+      <div class="admin-email-preview" aria-hidden="true">
+        <span class="admin-email-preview-label">Aperçu du bouton (même style sur chaque facture) :</span>
+        <span class="btn btn-primary btn-sm admin-btn-email" style="display:inline-flex;padding:0.65rem 1.15rem;cursor:default;pointer-events:none;opacity:0.95;">E-mail client</span>
+      </div>
+      <div class="admin-actions admin-actions-top">
+        <button type="button" class="btn btn-primary" id="btn-new-facture">Créer une facture (depuis un devis accepté)</button>
+      </div>
+      <div id="factures-list" class="admin-list"></div>
+    </section>
+
+    <section id="panel-modeles" class="admin-panel">
+      <h2>Modèles & tarifs</h2>
+      <p>Les modèles que vous ajoutez ici sont visibles par les clients. Ils peuvent en choisir un et demander un devis (avec votre prix affiché).</p>
+      <form id="modeles-form" class="admin-form-modeles">
+        <div class="form-group">
+          <label for="mod-nom">Nom du modèle</label>
+          <input type="text" id="mod-nom" name="name" required placeholder="Ex : Support smartphone">
+        </div>
+        <div class="form-group">
+          <label for="mod-desc">Description</label>
+          <textarea id="mod-desc" name="description" rows="2" placeholder="Courte description..."></textarea>
+        </div>
+        <div class="form-group">
+          <label for="mod-prix">Prix (€)</label>
+          <input type="number" id="mod-prix" name="price" min="0" step="0.01" placeholder="0.00">
+        </div>
+        <div class="form-group">
+          <label for="mod-image-file">Photo (fichier)</label>
+          <input type="file" id="mod-image-file" name="imageFile" accept="image/*">
+        </div>
+        <div class="form-group">
+          <label for="mod-image">Ou URL de l’image</label>
+          <input type="url" id="mod-image" name="imageUrl" placeholder="https://... (si pas de fichier)">
+        </div>
+        <button type="submit" class="btn btn-primary">Ajouter le modèle</button>
+      </form>
+      <div id="modeles-list" class="admin-list admin-modeles-grid"></div>
+    </section>
+
+    <section id="panel-galerie" class="admin-panel">
+      <h2>Galerie des réalisations</h2>
+      <p>Ajoutez des photos depuis votre ordinateur (ou une URL) pour que les <strong>clients</strong> les voient sur la page d’accueil.</p>
+      <form id="galerie-form" class="admin-form-galerie">
+        <div class="form-group">
+          <label for="gal-file">Photo (fichier)</label>
+          <input type="file" id="gal-file" name="file" accept="image/*" placeholder="Choisir une image">
+        </div>
+        <div class="form-group form-group-optional">
+          <label for="gal-src">Ou URL de l’image</label>
+          <input type="url" id="gal-src" name="src" placeholder="https://... (si pas de fichier)">
+        </div>
+        <div class="form-group">
+          <label for="gal-title">Titre <span aria-hidden="true">*</span></label>
+          <input type="text" id="gal-title" name="title" required placeholder="Ex : Pièce sur mesure">
+        </div>
+        <button type="submit" class="btn btn-primary">Ajouter la photo</button>
+      </form>
+      <p class="admin-form-hint">Utilisez un fichier image (JPG, PNG…) ou une URL. Les photos envoyées depuis votre ordinateur sont enregistrées localement.</p>
+      <div id="galerie-list" class="admin-gallery-list"></div>
+    </section>
+
+    <section id="panel-avis" class="admin-panel">
+      <h2>Avis clients</h2>
+      <p class="admin-payment-notice">Les avis <strong>publiés</strong> sont visibles sur la page d’accueil (section Avis). Les <strong>demandes</strong> du formulaire arrivent par e-mail et sont aussi listées ci-dessous si le navigateur a enregistré les données localement.</p>
+      <h3 class="admin-subheading">En attente de publication</h3>
+      <div id="avis-pending-list" class="admin-list"></div>
+      <h3 class="admin-subheading">Ajouter un avis (publication directe)</h3>
+      <form id="avis-form" class="admin-form-modeles">
+        <div class="form-group">
+          <label for="avis-nom">Nom affiché</label>
+          <input type="text" id="avis-nom" required placeholder="Ex. Jean P.">
+        </div>
+        <div class="form-group">
+          <label for="avis-note">Note</label>
+          <select id="avis-note" required>
+            <option value="5">5 étoiles</option>
+            <option value="4">4 étoiles</option>
+            <option value="3">3 étoiles</option>
+            <option value="2">2 étoiles</option>
+            <option value="1">1 étoile</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="avis-texte">Texte de l’avis</label>
+          <textarea id="avis-texte" rows="3" required placeholder="Le commentaire visible sur le site…"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Publier sur le site</button>
+      </form>
+      <h3 class="admin-subheading">Avis publiés</h3>
+      <div id="avis-published-list" class="admin-list"></div>
+    </section>
+  </main>
+
+  <!-- Modal créer facture -->
+  <div id="modal-facture" class="admin-modal" aria-hidden="true" role="dialog" aria-labelledby="modal-facture-title">
+    <div class="admin-modal-content">
+      <h3 id="modal-facture-title">Créer une facture</h3>
+      <form id="facture-form">
+        <input type="hidden" id="facture-devis-id" name="devisId">
+        <div class="form-group">
+          <label for="facture-client">Client</label>
+          <input type="text" id="facture-client" name="client" required readonly>
+        </div>
+        <div class="form-group">
+          <label for="facture-email">Email</label>
+          <input type="email" id="facture-email" name="email" required readonly>
+        </div>
+        <div class="form-group">
+          <label for="facture-montant">Montant (€)</label>
+          <input type="number" id="facture-montant" name="montant" required min="0" step="0.01" placeholder="0.00">
+        </div>
+        <div class="form-group">
+          <label for="facture-payment-link">Lien de paiement Stripe (carte bleue)</label>
+          <input type="url" id="facture-payment-link" name="paymentLink" placeholder="https://buy.stripe.com/... (créer dans Stripe → Liens de paiement)">
+        </div>
+        <p class="form-cb-note">Créez un lien dans <a href="https://dashboard.stripe.com/payment-links" target="_blank" rel="noopener">Stripe → Liens de paiement</a>, collez-le ici, puis envoyez-le au client pour qu’il paie en CB.</p>
+        <div class="admin-modal-actions">
+          <button type="button" class="btn btn-outline" id="modal-facture-cancel">Annuler</button>
+          <button type="submit" class="btn btn-primary">Créer la facture</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="admin.js?v=3"></script>
+</body>
+</html>

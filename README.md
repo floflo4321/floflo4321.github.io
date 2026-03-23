@@ -19,11 +19,21 @@ Après avoir poussé ce dépôt sur GitHub :
 
 Un fichier vide `.nojekyll` est présent à la racine : il indique à GitHub Pages de **ne pas** traiter le site avec Jekyll, ce qui évite des problèmes d’affichage sur un site HTML classique.
 
+## Catalogue modèles & tarifs (`models.json`)
+
+Le site affiche **en priorité** le fichier **`models.json`** (même catalogue pour tout le monde, y compris sur GitHub).
+
+1. Édite directement **`models.json`** (nom, description, `price`, `imageUrl`), **ou**
+2. Ajoute tes modèles dans **Admin** → onglet **Modèles & tarifs** → **Télécharger models.json**, puis remplace le fichier à la racine du projet et pousse sur GitHub.
+
+Sans `models.json` valide, le site utilise les données de l’admin (navigateur) ou des exemples.
+
 ## Pages principales
 
 | Fichier | Rôle |
 |---------|------|
 | `index.html` | Accueil |
+| `models.json` | **Catalogue** modèles / prix affiché sur l’accueil |
 | `payer.html` | Paiement CB (Stripe) |
 | `admin.html` | Espace administration (mot de passe) |
 

@@ -14,22 +14,7 @@
     }
   ];
 
-  var DEFAULT_MODELS = [
-    {
-      id: 'mod-default-1',
-      name: 'Prototype simple',
-      description: 'Piece de demonstration. Contactez-nous pour un modele personnalise.',
-      price: 25,
-      imageUrl: 'assets/logo.png'
-    },
-    {
-      id: 'mod-default-2',
-      name: 'Piece technique',
-      description: 'Impression sur mesure selon vos besoins.',
-      price: 49,
-      imageUrl: 'assets/logo.png'
-    }
-  ];
+  var DEFAULT_MODELS = [];
 
   var REVIEWS_KEY = 'janton_reviews';
   var REVIEWS_PENDING_KEY = 'janton_reviews_pending';
@@ -121,7 +106,7 @@
     }, { passive: true });
   }
 
-  // Catalogue modèles (côté client)
+  // Catalogue modèles : priorité 1 = fichier models.json (même affichage pour tous / GitHub), 2 = admin localStorage, 3 = défauts
   var modelsCatalog = document.getElementById('models-catalog');
   var selectedModelNotice = document.getElementById('selected-model-notice');
   var selectedModelId = document.getElementById('selected-model-id');
@@ -129,54 +114,88 @@
   var selectedModelPrice = document.getElementById('selected-model-price');
   var messageField = document.getElementById('message');
 
-  if (modelsCatalog) {
+  function bindModelDevisButtons() {
+    if (!modelsCatalog) return;
+    modelsCatalog.querySelectorAll('.model-devis-btn').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        var id = btn.dataset.modelId || '';
+        var name = btn.dataset.modelName || '';
+        var price = btn.dataset.modelPrice !== undefined && btn.dataset.modelPrice !== '' ? btn.dataset.modelPrice : '';
+        if (selectedModelId) selectedModelId.value = id;
+        if (selectedModelName) selectedModelName.value = name;
+        if (selectedModelPrice) selectedModelPrice.value = price;
+        if (selectedModelNotice) {
+          selectedModelNotice.hidden = false;
+          selectedModelNotice.innerHTML = 'Vous avez sélectionné : <strong>' + (name || 'Modèle') + '</strong>' + (price ? ' — ' + price + ' €' : '') + ' <button type="button" id="clear-model-btn">Changer</button>';
+          var clearBtn = selectedModelNotice.querySelector('#clear-model-btn');
+          if (clearBtn) clearBtn.addEventListener('click', function () {
+            if (selectedModelId) selectedModelId.value = '';
+            if (selectedModelName) selectedModelName.value = '';
+            if (selectedModelPrice) selectedModelPrice.value = '';
+            selectedModelNotice.hidden = true;
+            selectedModelNotice.innerHTML = '';
+          });
+        }
+        if (messageField && (name || price)) {
+          var prefix = 'Je souhaite un devis pour : ' + (name || 'ce modèle') + (price ? ' (' + price + ' €). ' : '. ');
+          if (!messageField.value || messageField.value.indexOf(prefix) !== 0) messageField.value = prefix + (messageField.value || '');
+        }
+        var contact = document.getElementById('contact');
+        if (contact) contact.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+  }
+
+  function renderModelsCatalog(models) {
+    if (!modelsCatalog) return;
+    if (!models || models.length === 0) {
+      modelsCatalog.innerHTML = '<p class="models-empty">Aucun modèle pour le moment. Éditez <strong>models.json</strong> ou consultez notre <a href="#contact">formulaire de contact</a>.</p>';
+      return;
+    }
+    modelsCatalog.innerHTML = models.map(function (m) {
+      var img = m.imageUrl
+        ? '<img class="model-card-image" src="' + m.imageUrl.replace(/"/g, '&quot;') + '" alt="" loading="lazy">'
+        : '<div class="model-card-image model-card-no-img">Pas d\'image</div>';
+      return '<article class="model-card">' + img +
+        '<div class="model-card-body">' +
+        '<h3>' + (m.name || 'Modèle').replace(/</g, '&lt;') + '</h3>' +
+        '<p class="model-card-price">' + (m.price != null ? m.price + ' €' : 'Sur devis') + '</p>' +
+        '<p>' + (m.description || '').replace(/</g, '&lt;') + '</p>' +
+        '<a href="#contact" class="btn btn-primary model-devis-btn" data-model-id="' + (m.id || '').replace(/"/g, '&quot;') + '" data-model-name="' + (m.name || '').replace(/"/g, '&quot;') + '" data-model-price="' + (m.price != null ? m.price : '') + '">Demander un devis pour ce modèle</a>' +
+        '</div></article>';
+    }).join('');
+    bindModelDevisButtons();
+  }
+
+  function loadModelsFallback() {
     var models = readArrayFromStorage('janton_models');
     if (models.length === 0) models = DEFAULT_MODELS.slice();
-    if (models.length === 0) {
-      modelsCatalog.innerHTML = '<p class="models-empty">Aucun modèle pour le moment. Consultez notre <a href="#contact">formulaire de contact</a> pour une demande sur mesure.</p>';
-    } else {
-      modelsCatalog.innerHTML = models.map(function (m) {
-        var img = m.imageUrl
-          ? '<img class="model-card-image" src="' + m.imageUrl.replace(/"/g, '&quot;') + '" alt="" loading="lazy">'
-          : '<div class="model-card-image model-card-no-img">Pas d\'image</div>';
-        return '<article class="model-card">' + img +
-          '<div class="model-card-body">' +
-          '<h3>' + (m.name || 'Modèle').replace(/</g, '&lt;') + '</h3>' +
-          '<p class="model-card-price">' + (m.price != null ? m.price + ' €' : 'Sur devis') + '</p>' +
-          '<p>' + (m.description || '').replace(/</g, '&lt;') + '</p>' +
-          '<a href="#contact" class="btn btn-primary model-devis-btn" data-model-id="' + (m.id || '').replace(/"/g, '&quot;') + '" data-model-name="' + (m.name || '').replace(/"/g, '&quot;') + '" data-model-price="' + (m.price != null ? m.price : '') + '">Demander un devis pour ce modèle</a>' +
-          '</div></article>';
-      }).join('');
+    renderModelsCatalog(models);
+  }
 
-      modelsCatalog.querySelectorAll('.model-devis-btn').forEach(function (btn) {
-        btn.addEventListener('click', function (e) {
-          e.preventDefault();
-          var id = btn.dataset.modelId || '';
-          var name = btn.dataset.modelName || '';
-          var price = btn.dataset.modelPrice !== undefined && btn.dataset.modelPrice !== '' ? btn.dataset.modelPrice : '';
-          if (selectedModelId) selectedModelId.value = id;
-          if (selectedModelName) selectedModelName.value = name;
-          if (selectedModelPrice) selectedModelPrice.value = price;
-          if (selectedModelNotice) {
-            selectedModelNotice.hidden = false;
-            selectedModelNotice.innerHTML = 'Vous avez sélectionné : <strong>' + (name || 'Modèle') + '</strong>' + (price ? ' — ' + price + ' €' : '') + ' <button type="button" id="clear-model-btn">Changer</button>';
-            var clearBtn = selectedModelNotice.querySelector('#clear-model-btn');
-            if (clearBtn) clearBtn.addEventListener('click', function () {
-              if (selectedModelId) selectedModelId.value = '';
-              if (selectedModelName) selectedModelName.value = '';
-              if (selectedModelPrice) selectedModelPrice.value = '';
-              selectedModelNotice.hidden = true;
-              selectedModelNotice.innerHTML = '';
-            });
+  if (modelsCatalog) {
+    // Priorité à l'admin local pour voir immédiatement les modèles ajoutés.
+    var localModels = readArrayFromStorage('janton_models');
+    if (localModels.length > 0) {
+      renderModelsCatalog(localModels);
+    } else {
+      fetch('models.json', { cache: 'no-store' })
+        .then(function (r) {
+          if (!r.ok) throw new Error('models.json introuvable');
+          return r.json();
+        })
+        .then(function (data) {
+          var arr = Array.isArray(data) ? data : [];
+          if (arr.length > 0) {
+            renderModelsCatalog(arr);
+          } else {
+            loadModelsFallback();
           }
-          if (messageField && (name || price)) {
-            var prefix = 'Je souhaite un devis pour : ' + (name || 'ce modèle') + (price ? ' (' + price + ' €). ' : '. ');
-            if (!messageField.value || messageField.value.indexOf(prefix) !== 0) messageField.value = prefix + (messageField.value || '');
-          }
-          var contact = document.getElementById('contact');
-          if (contact) contact.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        })
+        .catch(function () {
+          loadModelsFallback();
         });
-      });
     }
   }
 

@@ -47,6 +47,7 @@
   var avisPendingList = document.getElementById('avis-pending-list');
   var avisPublishedList = document.getElementById('avis-published-list');
   var avisForm = document.getElementById('avis-form');
+  var btnImportModelsJson = document.getElementById('btn-import-models-json');
 
   function isLoggedIn() {
     return sessionStorage.getItem(SESSION_KEY) === '1';
@@ -73,7 +74,8 @@
     }
     renderDevis();
     renderFactures();
-    renderModeles();
+    /* Modèles : d’abord synchro models.json, puis affichage (évite 2 / 3 incohérent) */
+    syncModelsFromJson(false);
     renderGalerie();
     renderAvisAdmin();
   }
@@ -155,6 +157,25 @@
 
   function setModels(arr) {
     localStorage.setItem(MODELS_KEY, JSON.stringify(arr));
+  }
+
+  function syncModelsFromJson(showAlert) {
+    return fetch('models.json', { cache: 'no-store' })
+      .then(function (resp) {
+        if (!resp.ok) throw new Error('models.json indisponible');
+        return resp.json();
+      })
+      .then(function (data) {
+        if (!Array.isArray(data)) throw new Error('models.json invalide');
+        setModels(data);
+        renderModeles();
+        if (showAlert) alert('Modèles et tarifs synchronisés depuis models.json.');
+      })
+      .catch(function () {
+        /* Afficher quand même le catalogue local si models.json échoue */
+        renderModeles();
+        if (showAlert) alert('Impossible de synchroniser : vérifiez models.json à la racine du site.');
+      });
   }
 
   function getReviews() {
@@ -583,6 +604,11 @@
   }
 
   var btnExportModelsJson = document.getElementById('btn-export-models-json');
+  if (btnImportModelsJson) {
+    btnImportModelsJson.addEventListener('click', function () {
+      syncModelsFromJson(true);
+    });
+  }
   if (btnExportModelsJson) {
     btnExportModelsJson.addEventListener('click', function () {
       var arr = getModels();

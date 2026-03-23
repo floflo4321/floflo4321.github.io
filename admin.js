@@ -12,7 +12,6 @@
   var FACTURES_KEY = 'janton_factures';
   var GALLERY_KEY = 'janton_gallery';
   var MODELS_KEY = 'janton_models';
-  var GITHUB_SYNC_SETTINGS_KEY = 'janton_github_sync_settings';
   var REVIEWS_KEY = 'janton_reviews';
   var REVIEWS_PENDING_KEY = 'janton_reviews_pending';
 
@@ -34,14 +33,6 @@
   var avisPendingList = document.getElementById('avis-pending-list');
   var avisPublishedList = document.getElementById('avis-published-list');
   var avisForm = document.getElementById('avis-form');
-  var ghOwnerInput = document.getElementById('gh-owner');
-  var ghRepoInput = document.getElementById('gh-repo');
-  var ghBranchInput = document.getElementById('gh-branch');
-  var ghPathInput = document.getElementById('gh-path');
-  var ghTokenInput = document.getElementById('gh-token');
-  var ghAutoSyncInput = document.getElementById('gh-auto-sync');
-  var ghPublishBtn = document.getElementById('btn-publish-models-github');
-  var ghStatus = document.getElementById('gh-sync-status');
 
   function isLoggedIn() {
     return sessionStorage.getItem(SESSION_KEY) === '1';
@@ -142,161 +133,6 @@
 
   function setModels(arr) {
     localStorage.setItem(MODELS_KEY, JSON.stringify(arr));
-  }
-
-  function getGithubSyncSettings() {
-    try {
-      return JSON.parse(localStorage.getItem(GITHUB_SYNC_SETTINGS_KEY) || '{}');
-    } catch (e) {
-      return {};
-    }
-  }
-
-  function saveGithubSyncSettings(settings) {
-    localStorage.setItem(GITHUB_SYNC_SETTINGS_KEY, JSON.stringify(settings || {}));
-  }
-
-  function setGithubStatus(text, isError) {
-    if (!ghStatus) return;
-    ghStatus.textContent = text || '';
-    ghStatus.style.color = isError ? '#ef4444' : '';
-  }
-
-  function toBase64Utf8(str) {
-    return btoa(unescape(encodeURIComponent(str)));
-  }
-
-  function readGithubForm() {
-    return {
-      owner: (ghOwnerInput && ghOwnerInput.value || '').trim(),
-      repo: (ghRepoInput && ghRepoInput.value || '').trim(),
-      branch: (ghBranchInput && ghBranchInput.value || 'main').trim() || 'main',
-      path: (ghPathInput && ghPathInput.value || 'models.json').trim() || 'models.json',
-      token: (ghTokenInput && ghTokenInput.value || '').trim(),
-      autoSync: !!(ghAutoSyncInput && ghAutoSyncInput.checked)
-    };
-  }
-
-  function persistGithubFormWithoutToken() {
-    var data = readGithubForm();
-    saveGithubSyncSettings({
-      owner: data.owner,
-      repo: data.repo,
-      branch: data.branch,
-      path: data.path,
-      autoSync: data.autoSync
-    });
-  }
-
-  function fillGithubFormFromStorage() {
-    var s = getGithubSyncSettings();
-    if (ghOwnerInput && s.owner) ghOwnerInput.value = s.owner;
-    if (ghRepoInput && s.repo) ghRepoInput.value = s.repo;
-    if (ghBranchInput) ghBranchInput.value = s.branch || 'main';
-    if (ghPathInput) ghPathInput.value = s.path || 'models.json';
-    if (ghAutoSyncInput) ghAutoSyncInput.checked = !!s.autoSync;
-  }
-
-  function maybeAutoSyncModels() {
-    var data = readGithubForm();
-    if (!data.autoSync) return;
-    if (!data.owner || !data.repo || !data.token) {
-      setGithubStatus('Auto-sync actif mais configuration GitHub incomplète (owner/repo/token).', true);
-      return;
-    }
-    publishModelsToGithub(false);
-  }
-
-  function publishModelsToGithub(showAlertOnSuccess) {
-    var data = readGithubForm();
-    persistGithubFormWithoutToken();
-
-    if (!data.owner || !data.repo || !data.token) {
-      setGithubStatus('Renseignez owner, repo et token GitHub.', true);
-      return Promise.resolve(false);
-    }
-
-    var models = getModels();
-    var json = JSON.stringify(models, null, 2);
-    var baseUrl = 'https://api.github.com/repos/' + encodeURIComponent(data.owner) + '/' + encodeURIComponent(data.repo) + '/contents/' + data.path.replace(/^\/+/, '');
-    setGithubStatus('Publication GitHub en cours…');
-
-    function extractGithubError(res) {
-      return res.text().then(function (txt) {
-        var msg = '';
-        try {
-          var parsed = JSON.parse(txt || '{}');
-          msg = parsed && (parsed.message || parsed.error || '');
-        } catch (e) {}
-        return msg || ('HTTP ' + res.status);
-      }).catch(function () {
-        return 'HTTP ' + res.status;
-      });
-    }
-
-    function publishWithAuthScheme(authHeaderValue) {
-      var headers = {
-        'Authorization': authHeaderValue,
-        'Accept': 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28'
-      };
-      return fetch(baseUrl + '?ref=' + encodeURIComponent(data.branch), {
-        method: 'GET',
-        headers: headers
-      })
-        .then(function (res) {
-          if (res.status === 404) return null;
-          if (!res.ok) {
-            return extractGithubError(res).then(function (apiMessage) {
-              throw new Error('Lecture du fichier GitHub impossible (' + apiMessage + ').');
-            });
-          }
-          return res.json();
-        })
-        .then(function (existingFile) {
-          var payload = {
-            message: 'Mise à jour automatique du catalogue models.json',
-            content: toBase64Utf8(json),
-            branch: data.branch
-          };
-          if (existingFile && existingFile.sha) payload.sha = existingFile.sha;
-          return fetch(baseUrl, {
-            method: 'PUT',
-            headers: Object.assign({ 'Content-Type': 'application/json' }, headers),
-            body: JSON.stringify(payload)
-          });
-        })
-        .then(function (putRes) {
-          if (!putRes.ok) {
-            return extractGithubError(putRes).then(function (apiMessage) {
-              throw new Error('Publication GitHub échouée (' + apiMessage + ').');
-            });
-          }
-          return putRes.json().then(function () {
-            return true;
-          });
-        });
-    }
-
-    return publishWithAuthScheme('Bearer ' + data.token)
-      .catch(function (firstErr) {
-        return publishWithAuthScheme('token ' + data.token).catch(function (secondErr) {
-          var firstMessage = (firstErr && firstErr.message) || 'échec avec Bearer';
-          var secondMessage = (secondErr && secondErr.message) || 'échec avec token';
-          throw new Error(firstMessage + ' | ' + secondMessage);
-        });
-      })
-      .then(function () {
-        setGithubStatus('Publication GitHub réussie : ' + data.path + ' (' + data.branch + ').');
-        if (showAlertOnSuccess) {
-          alert('models.json a été publié sur GitHub avec succès.');
-        }
-        return true;
-      })
-      .catch(function (err) {
-        setGithubStatus((err && err.message) || 'Erreur inconnue pendant la publication GitHub.', true);
-        return false;
-      });
   }
 
   function getReviews() {
@@ -677,7 +513,6 @@
         var arr = getModels().filter(function (x) { return x.id !== id; });
         setModels(arr);
         renderModeles();
-        maybeAutoSyncModels();
       });
     });
   }
@@ -710,7 +545,6 @@
         if (imageUrlInput) imageUrlInput.value = '';
         if (imageFileInput) imageFileInput.value = '';
         renderModeles();
-        maybeAutoSyncModels();
       }
       if (imageFile) {
         compressImageAsDataUrl(imageFile, 1200, 0.85, function (dataUrl) {
@@ -739,17 +573,6 @@
       alert('Fichier models.json téléchargé. Remplacez le fichier du même nom à la racine du site, puis enregistrez / envoyez sur GitHub pour mettre à jour le catalogue public.');
     });
   }
-
-  if (ghPublishBtn) {
-    ghPublishBtn.addEventListener('click', function () {
-      publishModelsToGithub(true);
-    });
-  }
-  if (ghOwnerInput) ghOwnerInput.addEventListener('change', persistGithubFormWithoutToken);
-  if (ghRepoInput) ghRepoInput.addEventListener('change', persistGithubFormWithoutToken);
-  if (ghBranchInput) ghBranchInput.addEventListener('change', persistGithubFormWithoutToken);
-  if (ghPathInput) ghPathInput.addEventListener('change', persistGithubFormWithoutToken);
-  if (ghAutoSyncInput) ghAutoSyncInput.addEventListener('change', persistGithubFormWithoutToken);
 
   // Avis clients (publication + file d’attente)
   function renderAvisAdmin() {
@@ -847,7 +670,6 @@
   }
 
   // Init
-  fillGithubFormFromStorage();
   if (isLoggedIn()) {
     showAdmin();
   } else {

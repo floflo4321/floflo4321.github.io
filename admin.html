@@ -70,40 +70,6 @@
       <div class="admin-actions" style="margin-bottom: var(--space-md);">
         <button type="button" class="btn btn-outline" id="btn-export-models-json">Télécharger models.json (catalogue pour le site)</button>
       </div>
-      <div class="admin-github-sync">
-        <h3 class="admin-subheading">Synchronisation GitHub (models.json)</h3>
-        <p class="admin-form-hint">Renseignez votre dépôt GitHub puis cliquez sur publier. Optionnel : activer l’envoi automatique après chaque ajout/suppression de modèle.</p>
-        <div class="admin-form-github">
-          <div class="form-group">
-            <label for="gh-owner">Propriétaire (owner)</label>
-            <input type="text" id="gh-owner" placeholder="Ex : fgour">
-          </div>
-          <div class="form-group">
-            <label for="gh-repo">Dépôt (repo)</label>
-            <input type="text" id="gh-repo" placeholder="Ex : site-janton3D87">
-          </div>
-          <div class="form-group">
-            <label for="gh-branch">Branche</label>
-            <input type="text" id="gh-branch" value="main" placeholder="main">
-          </div>
-          <div class="form-group">
-            <label for="gh-path">Chemin fichier</label>
-            <input type="text" id="gh-path" value="models.json" placeholder="models.json">
-          </div>
-          <div class="form-group">
-            <label for="gh-token">Token GitHub (PAT)</label>
-            <input type="password" id="gh-token" placeholder="github_pat_...">
-          </div>
-          <div class="form-group admin-github-actions">
-            <button type="button" class="btn btn-primary" id="btn-publish-models-github">Publier models.json sur GitHub</button>
-            <label class="admin-checkbox">
-              <input type="checkbox" id="gh-auto-sync">
-              <span>Auto-sync après chaque modification</span>
-            </label>
-          </div>
-        </div>
-        <p id="gh-sync-status" class="admin-form-hint" aria-live="polite"></p>
-      </div>
       <form id="modeles-form" class="admin-form-modeles">
         <div class="form-group">
           <label for="mod-nom">Nom du modèle</label>

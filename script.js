@@ -364,22 +364,6 @@
     });
   }
 
-  // Menu déroulant Espace pro
-  var adminTrigger = document.getElementById('admin-trigger');
-  var adminMenu = document.getElementById('admin-menu');
-  if (adminTrigger && adminMenu) {
-    adminTrigger.addEventListener('click', function (e) {
-      e.stopPropagation();
-      var open = adminTrigger.getAttribute('aria-expanded') === 'true';
-      adminTrigger.setAttribute('aria-expanded', !open);
-      adminMenu.classList.toggle('is-open', !open);
-    });
-    document.addEventListener('click', function () {
-      adminTrigger.setAttribute('aria-expanded', 'false');
-      adminMenu.classList.remove('is-open');
-    });
-  }
-
   // Smooth scroll pour ancres (amélioration si besoin)
   document.querySelectorAll('a[href^="#"]').forEach(function (anchor) {
     anchor.addEventListener('click', function (e) {

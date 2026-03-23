@@ -6,7 +6,21 @@
 (function () {
   'use strict';
 
-  var ADMIN_PASSWORD = 'janton87'; // À modifier pour votre mot de passe
+  var ADMIN_ACCESS_KEY = 'janton87pro'; // Changez cette clé pour votre URL privée
+  var accessParam = '';
+  try {
+    accessParam = new URLSearchParams(window.location.search).get('access') || '';
+  } catch (e) {
+    accessParam = '';
+  }
+  if (accessParam !== ADMIN_ACCESS_KEY) {
+    window.location.replace('index.html');
+    return;
+  }
+
+  // Hash SHA-256 du mot de passe admin (évite d'exposer le mot de passe en clair dans le code).
+  // Mot de passe actuel conservé: "janton87"
+  var ADMIN_PASSWORD_HASH = 'b2dc5a3446f442721ccbd2f6232bd7f799f82a9eec395f4db75a97ae872e2f93';
   var SESSION_KEY = 'janton_admin_session';
   var DEVIS_KEY = 'janton_devis';
   var FACTURES_KEY = 'janton_factures';
@@ -41,6 +55,14 @@
   function setLoggedIn(value) {
     if (value) sessionStorage.setItem(SESSION_KEY, '1');
     else sessionStorage.removeItem(SESSION_KEY);
+  }
+
+  function sha256Hex(text) {
+    return crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)).then(function (buf) {
+      return Array.from(new Uint8Array(buf)).map(function (b) {
+        return b.toString(16).padStart(2, '0');
+      }).join('');
+    });
   }
 
   function showAdmin() {
@@ -176,13 +198,17 @@
   if (loginForm) {
     loginForm.addEventListener('submit', function (e) {
       e.preventDefault();
-      var pwd = adminPassword && adminPassword.value;
-      if (pwd === ADMIN_PASSWORD) {
-        setLoggedIn(true);
-        showAdmin();
-      } else {
-        alert('Mot de passe incorrect.');
-      }
+      var pwd = adminPassword && adminPassword.value || '';
+      sha256Hex(pwd).then(function (hash) {
+        if (hash === ADMIN_PASSWORD_HASH) {
+          setLoggedIn(true);
+          showAdmin();
+        } else {
+          alert('Mot de passe incorrect.');
+        }
+      }).catch(function () {
+        alert('Erreur de vérification du mot de passe.');
+      });
     });
   }
 
